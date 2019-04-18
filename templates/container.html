@@ -1,0 +1,18 @@
+<html>
+    <head>
+        <title>{{.PageTitle}}</title>
+    </head>
+    <body>
+        
+        <ul>
+            {{ range .Todos }}
+                {{ if .Done }}
+                    <li class="done">{{.Title}} is Complete</li>
+                {{ else }}
+                    <li>{{.Title}}</li>
+                {{ end }}
+            {{ end }}
+        </ul>
+
+    </body>
+</html>
