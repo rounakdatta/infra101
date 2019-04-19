@@ -23,15 +23,15 @@ type TodoPageData struct {
 }
 
 type userDetails struct {
-	username string
-	password string
-	age      int
+	Username string
+	Password string
+	Age      int
 }
 
 const (
-	DB_USER     = "postgres"
-	DB_PASSWORD = "postgres"
-	DB_NAME     = "infra101"
+	DBUser     = "postgres"
+	DBPassword = "postgres"
+	DBName     = "infra101"
 )
 
 func checkErr(err error) {
@@ -51,14 +51,26 @@ func prettyPrintMyResults(allMyRows *sql.Rows) (results []userDetails) {
 		checkErr(err)
 
 		myDataContainer := userDetails{
-			username: username,
-			password: password,
-			age:      age,
+			Username: username,
+			Password: password,
+			Age:      age,
 		}
 		allData = append(allData, myDataContainer)
 	}
 
 	return allData
+}
+
+func showMyTable(db *sql.DB, tableName string) (results []userDetails) {
+	fmt.Printf("Querying the table %s for data\n", tableName)
+	mySelectQuery := fmt.Sprintf("SELECT * FROM %s", tableName)
+	rows, err := db.Query(mySelectQuery)
+	checkErr(err)
+
+	// just checking out the datatype
+	fmt.Println(reflect.TypeOf(rows))
+
+	return prettyPrintMyResults(rows)
 }
 
 func legacyServer() {
@@ -74,6 +86,8 @@ func legacyServer() {
 
 func main() {
 	r := mux.NewRouter()
+
+	// simple data collection API
 	r.HandleFunc("/infra/{person}/read/{item}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		personName := vars["person"]
@@ -82,6 +96,7 @@ func main() {
 		fmt.Fprintf(w, "Request received: %s item for %s", itemName, personName)
 	})
 
+	// templating data API
 	r.HandleFunc("/infra/all", func(w http.ResponseWriter, r *http.Request) {
 		containerFile := template.Must(template.ParseFiles("templates/container.html"))
 
@@ -98,19 +113,23 @@ func main() {
 		containerFile.Execute(w, data)
 	})
 
-	dbInfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", DB_USER, DB_PASSWORD, DB_NAME)
+	// postgres initialization
+	dbInfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", DBUser, DBPassword, DBName)
 	db, err := sql.Open("postgres", dbInfo)
 	checkErr(err)
-	fmt.Println(db)
+	fmt.Println(reflect.TypeOf(db))
 
-	fmt.Println("Lets Query data")
-	rows, err := db.Query("SELECT * FROM demoTable")
-	checkErr(err)
-	fmt.Println(reflect.TypeOf(rows))
+	// show all data API
+	r.HandleFunc("/infra/db/view/{dbname}/all", func(w http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
 
-	// don't raw print the rows
-	// fmt.Println(rows)
+		var dbResults = showMyTable(db, vars["dbname"])
+		displayerFile := template.Must(template.ParseFiles("templates/displayer.html"))
 
+		displayerFile.Execute(w, dbResults)
+	})
+
+	// input data -> store into postgres -> show API
 	r.HandleFunc("/infra/db/insert/{dbname}/{username}/{password}/{age}", func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 
@@ -119,7 +138,12 @@ func main() {
 		fmt.Printf("My query is: %s\n", insertPayload)
 		err = db.QueryRow(insertPayload).Scan(&insertedUsername)
 		checkErr(err)
-		fmt.Fprintf(w, "worked!")
+
+		var dbResults = showMyTable(db, vars["dbname"])
+		displayerFile := template.Must(template.ParseFiles("templates/displayer.html"))
+
+		displayerFile.Execute(w, dbResults)
+		fmt.Fprintf(w, "worked!") // don't ignore this
 	})
 
 	http.ListenAndServe(":2000", r)

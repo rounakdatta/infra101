@@ -1,0 +1,16 @@
+<html>
+    <head>
+        <title>DB Results</title>
+    </head>
+    <body>
+        <ul>
+            {{ range . }}
+                <li>
+                    {{ .Username }}
+                    {{ .Password }}
+                    {{ .Age }}
+                </li>
+            {{ end }}
+        </ul>
+    </body>
+</html>
