@@ -6,10 +6,14 @@ import (
 	"net/http"
 	"reflect"
 	"text/template"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
 	_ "github.com/lib/pq"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Todo struct {
@@ -28,6 +32,14 @@ type userDetails struct {
 	Age      int
 }
 
+type registrationDetails struct {
+	Uid            string
+	Username       string
+	SecurePassword string
+	CreateDate     string
+	AccountActive  bool
+}
+
 const (
 	DBUser     = "postgres"
 	DBPassword = "postgres"
@@ -38,6 +50,16 @@ func checkErr(err error) {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func HashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 10)
+	return string(bytes), err
+}
+
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }
 
 func prettyPrintMyResults(allMyRows *sql.Rows) (results []userDetails) {
@@ -144,6 +166,38 @@ func main() {
 
 		displayerFile.Execute(w, dbResults)
 		fmt.Fprintf(w, "worked!") // don't ignore this
+	})
+
+	// register new user API
+	r.HandleFunc("/infra/register", func(w http.ResponseWriter, r *http.Request) {
+		formFile := template.Must(template.ParseFiles("templates/register.html"))
+		timeNow := fmt.Sprintf(time.Now().Format("2006-01-02"))
+
+		if r.Method != http.MethodPost {
+			formFile.Execute(w, nil)
+		} else {
+			pwdHash, hashErr := HashPassword(r.FormValue("password"))
+			checkErr(hashErr)
+
+			allDetailsCollected := registrationDetails{
+				Uid:            uuid.Must(uuid.NewRandom()).String(),
+				Username:       r.FormValue("username"),
+				SecurePassword: pwdHash,
+				CreateDate:     timeNow,
+				AccountActive:  true,
+			}
+
+			_ = allDetailsCollected
+			fmt.Println(len(uuid.Must(uuid.NewRandom()).String()))
+			fmt.Println(CheckPasswordHash("hello", pwdHash))
+
+			var insertedUsername string
+			insertPayload := fmt.Sprintf("INSERT INTO users(uid, username, createdate, accountactive, securepassword) VALUES('%s', '%s', '%v', %v, '%s') returning username;", allDetailsCollected.Uid, allDetailsCollected.Username, allDetailsCollected.CreateDate, allDetailsCollected.AccountActive, allDetailsCollected.SecurePassword)
+			fmt.Printf("My query is: %s\n", insertPayload)
+			err = db.QueryRow(insertPayload).Scan(&insertedUsername)
+			checkErr(err)
+
+		}
 	})
 
 	http.ListenAndServe(":2000", r)
