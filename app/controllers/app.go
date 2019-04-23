@@ -3,10 +3,14 @@ package controllers
 import (
 	"database/sql"
 	"fmt"
+	"infra101/app"
 	"reflect"
 	"regexp"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/revel/revel"
+	_ "github.com/rounakdatta/infra101/app"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -27,6 +31,12 @@ type registrationDetails struct {
 	SecurePassword string
 	CreateDate     string
 	AccountActive  bool
+}
+
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
 // HashPassword function: hash a password usng bcrypt
@@ -89,21 +99,44 @@ func (c App) Register() revel.Result {
 	email := c.Params.Get("email")
 	pwd := c.Params.Get("pwd")
 
-	// validate the presence of username and
+	// alidation procedures
 	c.Validation.Required(email).Message("Register error: username is a required parameter")
 	c.Validation.Required(pwd).Message("Register error: password is a required parameter")
 
-	// username and password must be of minimum length
 	c.Validation.MinSize(email, 3).Message("Register error: username length musn't be lesser than 3 chars")
 	c.Validation.MinSize(pwd, 6).Message("Register error: password length musn't be lesser than 6 chars")
 
 	emailExpMatcher := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@srmuniv.edu.in")
-
 	if c.Validation.HasErrors() || !emailExpMatcher.MatchString(email) {
 		c.Validation.Keep()
 		c.FlashParams()
 		return c.Redirect(App.Index)
 	}
+
+	// database write for registration
+	timeNow := fmt.Sprintf(time.Now().Format("2006-01-02"))
+
+	pwdHash, hashErr := HashPassword(pwd)
+	checkErr(hashErr)
+
+	allDetailsCollected := registrationDetails{
+		Uid:            uuid.Must(uuid.NewRandom()).String(),
+		Username:       email,
+		SecurePassword: pwdHash,
+		CreateDate:     timeNow,
+		AccountActive:  true,
+	}
+
+	_ = allDetailsCollected
+	fmt.Println(len(uuid.Must(uuid.NewRandom()).String()))
+	fmt.Println(CheckPasswordHash("hello", pwdHash))
+
+	var insertedUsername string
+	insertPayload := fmt.Sprintf("INSERT INTO users(uid, username, createdate, accountactive, securepassword) VALUES('%s', '%s', '%v', %v, '%s') returning username;", allDetailsCollected.Uid, allDetailsCollected.Username, allDetailsCollected.CreateDate, allDetailsCollected.AccountActive, allDetailsCollected.SecurePassword)
+	fmt.Printf("My query is: %s\n", insertPayload)
+	fmt.Println(app.DB)
+	err := app.DB.QueryRow(insertPayload).Scan(&insertedUsername)
+	checkErr(err)
 
 	return c.Render(email)
 }

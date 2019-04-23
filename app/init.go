@@ -31,6 +31,16 @@ func checkErr(err error) {
 	}
 }
 
+var DB *sql.DB
+
+// InitDB function: initialize PostgreSQL database
+func InitDB() {
+	dbInfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", DBUser, DBPassword, DBName)
+	DB, err := sql.Open("postgres", dbInfo)
+	checkErr(err)
+	fmt.Println(reflect.TypeOf(DB))
+}
+
 func init() {
 	// Filters is the default set of global filters.
 	revel.Filters = []revel.Filter{
@@ -76,13 +86,3 @@ var HeaderFilter = func(c *revel.Controller, fc []revel.Filter) {
 //		// Dev mode
 //	}
 //}
-
-var pgdb *sql.DB
-
-// InitDB function: initialize PostgreSQL database
-func InitDB() {
-	dbInfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", DBUser, DBPassword, DBName)
-	pgdb, err := sql.Open("postgres", dbInfo)
-	checkErr(err)
-	fmt.Println(reflect.TypeOf(pgdb))
-}
