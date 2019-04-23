@@ -10,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/revel/revel"
-	_ "github.com/rounakdatta/infra101/app"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -131,12 +130,10 @@ func (c App) Register() revel.Result {
 	fmt.Println(len(uuid.Must(uuid.NewRandom()).String()))
 	fmt.Println(CheckPasswordHash("hello", pwdHash))
 
-	var insertedUsername string
-	insertPayload := fmt.Sprintf("INSERT INTO users(uid, username, createdate, accountactive, securepassword) VALUES('%s', '%s', '%v', %v, '%s') returning username;", allDetailsCollected.Uid, allDetailsCollected.Username, allDetailsCollected.CreateDate, allDetailsCollected.AccountActive, allDetailsCollected.SecurePassword)
+	insertPayload := fmt.Sprintf("INSERT INTO users(uid, username, createdate, accountactive, securepassword) VALUES('%s', '%s', '%v', %v, '%s');", allDetailsCollected.Uid, allDetailsCollected.Username, allDetailsCollected.CreateDate, allDetailsCollected.AccountActive, allDetailsCollected.SecurePassword)
 	fmt.Printf("My query is: %s\n", insertPayload)
-	fmt.Println(app.DB)
-	err := app.DB.QueryRow(insertPayload).Scan(&insertedUsername)
-	checkErr(err)
+	fmt.Println(app.PQDB)
+	app.PQDB.QueryRow(insertPayload)
 
 	return c.Render(email)
 }

@@ -3,12 +3,14 @@ package app
 import (
 	"database/sql"
 	"fmt"
-	"reflect"
 
 	_ "github.com/lib/pq"
 
 	"github.com/revel/revel"
 )
+
+// PQDB export for global use
+var PQDB *sql.DB
 
 // database connectivity credentials
 const (
@@ -31,14 +33,12 @@ func checkErr(err error) {
 	}
 }
 
-var DB *sql.DB
-
 // InitDB function: initialize PostgreSQL database
 func InitDB() {
 	dbInfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", DBUser, DBPassword, DBName)
-	DB, err := sql.Open("postgres", dbInfo)
+	var err error
+	PQDB, err = sql.Open("postgres", dbInfo)
 	checkErr(err)
-	fmt.Println(reflect.TypeOf(DB))
 }
 
 func init() {
