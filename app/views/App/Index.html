@@ -1,0 +1,32 @@
+{{set . "title" "Home"}}
+{{template "header.html" .}}
+<script src="/public/js/passwordChecker.js"></script>
+
+<header class="jumbotron" style="background-color:#A9F16C">
+  <div class="container">
+    <div class="row">
+      <h1>Infra101</h1>
+      <h2>{{.ref}}</h2>
+      <p></p>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div class="row">
+    <div class="span6">
+      {{template "flash.html" .}}
+
+      <form action="/App/Register" method="POST">
+        {{with $field := field "email" .}}
+          <input type="text" name="{{$field.Name}}" id="{{$field.Name}}" value="{{$field.Flash}}" placeholder="{{$field.Name}}" onkeyup="check(this);" required="true">
+        {{end}}
+        <input type="password" name="pwd" id="pwd" placeholder="password" onkeyup="check(this);" required="true"><br><br><br>
+        <input type="submit" name="submitButton" id="submitButton" value="Register"><br><br>
+      </form>
+      <span id='pwdMsg'></span><br>
+    </div>
+  </div>
+</div>
+
+{{template "footer.html" .}}

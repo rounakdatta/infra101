@@ -1,7 +1,20 @@
 package app
 
 import (
+	"database/sql"
+	"fmt"
+	"reflect"
+
+	_ "github.com/lib/pq"
+
 	"github.com/revel/revel"
+)
+
+// database connectivity credentials
+const (
+	DBUser     = "postgres"
+	DBPassword = "postgres"
+	DBName     = "infra101"
 )
 
 var (
@@ -11,6 +24,12 @@ var (
 	// BuildTime revel app build-time (ldflags)
 	BuildTime string
 )
+
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
 
 func init() {
 	// Filters is the default set of global filters.
@@ -34,7 +53,7 @@ func init() {
 	// revel.DevMode and revel.RunMode only work inside of OnAppStart. See Example Startup Script
 	// ( order dependent )
 	// revel.OnAppStart(ExampleStartupScript)
-	// revel.OnAppStart(InitDB)
+	revel.OnAppStart(InitDB)
 	// revel.OnAppStart(FillCache)
 }
 
@@ -57,3 +76,13 @@ var HeaderFilter = func(c *revel.Controller, fc []revel.Filter) {
 //		// Dev mode
 //	}
 //}
+
+var pgdb *sql.DB
+
+// InitDB function: initialize PostgreSQL database
+func InitDB() {
+	dbInfo := fmt.Sprintf("user=%s password=%s dbname=%s sslmode=disable", DBUser, DBPassword, DBName)
+	pgdb, err := sql.Open("postgres", dbInfo)
+	checkErr(err)
+	fmt.Println(reflect.TypeOf(pgdb))
+}
